@@ -1,46 +1,20 @@
 import nltk
 nltk.download('punkt')
 nltk.download('stopwords')
-nltk.download('wordnet')
-nltk.download('omw-1.4')  # Nécessaire pour WordNet
-nltk.download('averaged_perceptron_tagger')  # Pour la lemmatisation
-nltk.download('punkt_french')  # Modèle de tokenization pour le français
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
 import string
 import streamlit as st
-
-import nltk
-import os
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
-
-# Configuration des données NLTK
-nltk_data_path = os.path.join(os.getcwd(), 'nltk_data')
-os.makedirs(nltk_data_path, exist_ok=True)
-nltk.data.path.append(nltk_data_path)
-
-# Téléchargement des ressources nécessaires
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt', download_dir=nltk_data_path, quiet=True)
-
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords', download_dir=nltk_data_path, quiet=True)
-
 import spacy
-spacy.cli.download("fr_core_news_sm")
+
+# Charger le modèle français de spaCy pour le traitement NLP
+nlp = spacy.load("fr_core_news_sm")
 
 # Chargement du fichier contenant les questions réponses
 def charger_fichier(chemin_fichier):
     with open(chemin_fichier, 'r', encoding='utf-8') as f:
         data = f.read()
     return data
-
 
 # Chargement du texte
 data = charger_fichier("data_science_qa.txt")
@@ -56,16 +30,14 @@ for section in sections:
             reponse = lines[i + 1][3:].strip()
             qa_pairs[question] = reponse
 
-
-# Prétraitement du texte
+# Prétraitement du texte avec spaCy pour le français
 def preprocess(texte):
-    tokens = word_tokenize(texte.lower())
-    stop_words = set(stopwords.words('french'))  # Stopwords en français
-    lemmatizer = WordNetLemmatizer()
-    tokens = [lemmatizer.lemmatize(word) for word in tokens if
-              word not in stop_words and word not in string.punctuation]
+    doc = nlp(texte.lower())
+    tokens = [token.lemma_ for token in doc if
+              not token.is_stop and
+              not token.is_punct and
+              not token.is_space]
     return set(tokens)
-
 
 # Fonction pour retrouver la réponse la plus pertinente
 def trouver_meilleure_reponse(question):
@@ -81,8 +53,7 @@ def trouver_meilleure_reponse(question):
             meilleure_question = q
 
     return meilleure_question, qa_pairs.get(meilleure_question,
-                                            "Désolé, je n'ai pas trouvé de réponse à votre question.")
-
+                                        "Désolé, je n'ai pas trouvé de réponse à votre question.")
 
 # Interface avec Streamlit
 st.title("🤖 Chatbot - Science des Données")
